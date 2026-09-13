@@ -28,10 +28,13 @@ import {
   Edit3,
   Activity,
   History,
-  ShieldAlert
+  LogIn,
+  LogOut,
+  UserCheck
 } from 'lucide-react-native';
 import { initDatabase } from './src/db/database';
 import { useWorkoutStore } from './src/store/workoutStore';
+import { AuthModal } from './src/components/AuthModal';
 
 const ASSETS = {
   bgSplash: require('./assets/custom/bg-splash.jpg'),
@@ -55,22 +58,22 @@ export default function App() {
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isVolumeModalOpen, setIsVolumeModalOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [aiNote, setAiNote] = useState('');
 
-  // Инлайн-редактирование параметров
   const [isEditingParams, setIsEditingParams] = useState(false);
   const [editWeight, setEditWeight] = useState('');
   const [editHeight, setEditHeight] = useState('');
   const [editBench, setEditBench] = useState('');
   const [editRest, setEditRest] = useState('');
 
-  // Плеер
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
 
   useEffect(() => {
     initDatabase();
     store.bootstrap();
+    store.checkSession();
   }, []);
 
   useEffect(() => {
@@ -157,11 +160,12 @@ export default function App() {
           </View>
         </SafeAreaView>
         {renderProfileModal()}
+        <AuthModal visible={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </ImageBackground>
     );
   }
 
-  // 2. РАБОЧИЙ ЭКРАН ТРЕНИРОВКИ
+  // 2. РАБОЧИЙ ЭКРАН
   return (
     <ImageBackground source={ASSETS.bgMain} style={styles.mainBg} resizeMode="cover">
       <StatusBar barStyle="light-content" />
@@ -181,7 +185,9 @@ export default function App() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.navProfileBtn} onPress={() => setIsProfileOpen(true)}>
-              <Text style={styles.navProfileName}>{store.profile.username}</Text>
+              <Text style={styles.navProfileName}>
+                {store.user ? (store.user.email?.split('@')[0] || store.profile.username) : store.profile.username}
+              </Text>
               <Image source={avatarSource} style={styles.navAvatar} />
             </TouchableOpacity>
           </View>
@@ -254,7 +260,7 @@ export default function App() {
             </View>
           </View>
 
-          {/* Плашка белкового якоря на день */}
+          {/* Плашка белкового якоря */}
           <TouchableOpacity 
             style={[styles.proteinBanner, store.isProteinReachedToday && styles.proteinBannerDone]}
             onPress={store.toggleProtein}
@@ -307,7 +313,6 @@ export default function App() {
               <View style={styles.exHeader}>
                 <Text style={styles.exTitle}>{activeExercise.def.name}</Text>
                 
-                {/* Метка темпа и диапазона */}
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   <View style={styles.tempoBadge}>
                     <Text style={styles.tempoBadgeText}>⚡ ТЕМП: {activeExercise.def.tempo} (3с негатив)</Text>
@@ -318,7 +323,7 @@ export default function App() {
                 </View>
               </View>
 
-              {/* План прогрессии / AI Coach */}
+              {/* Gemini / Target */}
               {activeExercise.aiInsight ? (
                 <View style={styles.aiInsightBox}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -343,7 +348,7 @@ export default function App() {
                 </View>
               ) : null}
 
-              {/* Таблица сетов с призраком прошлого раза */}
+              {/* Таблица сетов */}
               <View style={styles.tableHead}>
                 <Text style={[styles.th, { width: 24 }]}>№</Text>
                 <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>ВЕС (КГ)</Text>
@@ -358,7 +363,6 @@ export default function App() {
 
                 return (
                   <View key={set.id} style={{ marginBottom: 6 }}>
-                    {/* Строка с подсказкой прошлой тренировки (Призрак) */}
                     <View style={styles.pastGhostRow}>
                       <History size={10} color="#64748B" />
                       <Text style={styles.pastGhostText}>
@@ -369,7 +373,6 @@ export default function App() {
                     <View style={[styles.setRow, set.isCompleted && styles.setRowDone]}>
                       <Text style={styles.setNum}>{idx + 1}</Text>
 
-                      {/* Вес */}
                       <View style={styles.valBox}>
                         <TouchableOpacity onPress={() => store.updateSet(set.id, 'weight', -activeExercise.def.weight_step)} style={styles.stepBtn}>
                           <Minus size={11} color="#CBD5E1" />
@@ -380,7 +383,6 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
 
-                      {/* Повторы */}
                       <View style={styles.valBoxSmall}>
                         <TouchableOpacity onPress={() => store.updateSet(set.id, 'reps', -1)} style={styles.stepBtn}>
                           <Minus size={11} color="#CBD5E1" />
@@ -391,7 +393,6 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
 
-                      {/* RIR */}
                       <TouchableOpacity
                         onPress={() => store.updateSet(set.id, 'rir', set.rir >= 3 ? -3 : 1)}
                         style={styles.rirChip}
@@ -399,7 +400,6 @@ export default function App() {
                         <Text style={styles.rirNum}>{set.rir}</Text>
                       </TouchableOpacity>
 
-                      {/* Чекбокс */}
                       <TouchableOpacity
                         onPress={() => store.toggleCompleteSet(set.id)}
                         style={[styles.checkBtn, set.isCompleted && styles.checkBtnDone]}
@@ -407,7 +407,6 @@ export default function App() {
                         <Check size={16} color={set.isCompleted ? "#064E3B" : "#475569"} />
                       </TouchableOpacity>
 
-                      {/* Удалить */}
                       {(activeExercise.sets.length > 1) ? (
                         <TouchableOpacity onPress={() => store.removeSet(set.id)} style={{ marginLeft: 4 }}>
                           <Trash2 size={14} color="#64748B" />
@@ -459,6 +458,7 @@ export default function App() {
         {renderVolumeModal()}
         {renderDayPickerModal()}
         {renderAiModal()}
+        <AuthModal visible={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </SafeAreaView>
     </ImageBackground>
   );
@@ -541,7 +541,30 @@ export default function App() {
                   <Camera size={12} color="#FFFFFF" />
                 </View>
               </TouchableOpacity>
-              <Text style={styles.profileUsername}>{store.profile.username}</Text>
+              <Text style={styles.profileUsername}>
+                {store.user ? (store.user.email?.split('@')[0] || store.profile.username) : store.profile.username}
+              </Text>
+            </View>
+
+            {/* Блок облачного аккаунта Supabase */}
+            <View style={styles.accountCard}>
+              {store.user ? (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <UserCheck size={16} color="#10B981" />
+                    <Text style={styles.accountEmailText} numberOfLines={1}>{store.user.email}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => store.signOut()} style={styles.logoutBtn}>
+                    <LogOut size={13} color="#EF4444" />
+                    <Text style={styles.logoutBtnText}>Выйти</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => { setIsProfileOpen(false); setIsAuthOpen(true); }} style={styles.loginBannerBtn}>
+                  <LogIn size={15} color="#0D9488" />
+                  <Text style={styles.loginBannerText}>Войти / Создать аккаунт (Облако)</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={styles.profileStatsRow}>
@@ -714,7 +737,7 @@ const styles = StyleSheet.create({
   navVolumeBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(14, 42, 55, 0.75)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#38BDF866' },
   navVolumeText: { color: '#38BDF8', fontSize: 12, fontWeight: '700' },
   navProfileBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(18, 38, 42, 0.75)', paddingLeft: 10, paddingRight: 4, paddingVertical: 4, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(94, 234, 212, 0.3)' },
-  navProfileName: { color: '#F0FDFA', fontSize: 12, fontWeight: '700' },
+  navProfileName: { color: '#F0FDFA', fontSize: 12, fontWeight: '700', maxWidth: 100 },
   navAvatar: { width: 26, height: 26, borderRadius: 13 },
 
   scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
@@ -831,6 +854,13 @@ const styles = StyleSheet.create({
   profileLargeAvatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: '#E4E4E7' },
   avatarCameraBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#10B981', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
   profileUsername: { fontSize: 18, fontWeight: '800', color: '#18181B', marginTop: 6 },
+
+  accountCard: { backgroundColor: '#F4F4F5', borderRadius: 8, padding: 10, marginVertical: 8, alignItems: 'center' },
+  accountEmailText: { fontSize: 12, fontWeight: '700', color: '#09090B', maxWidth: 170 },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  logoutBtnText: { fontSize: 11, fontWeight: '700', color: '#EF4444' },
+  loginBannerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  loginBannerText: { fontSize: 12, fontWeight: '800', color: '#0D9488' },
 
   profileStatsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#F4F4F5', marginVertical: 6 },
   profileStatCol: { alignItems: 'center' },

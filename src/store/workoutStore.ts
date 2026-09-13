@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../services/supabase';
 import { 
   getAllWorkoutDays, 
   getExercisesForDay, 
@@ -31,7 +33,7 @@ export interface WorkoutSet {
 export interface ExerciseSession {
   def: ExerciseDef;
   sets: WorkoutSet[];
-  pastSets: PastSet[]; // Призрак прошлой тренировки
+  pastSets: PastSet[];
   nextTarget: { weight: number; targetReps: string; cue: string } | null;
   aiInsight?: CoachInsight | null;
   isFinished: boolean;
@@ -51,6 +53,11 @@ interface WorkoutState {
   stats: { count: number; tonnageKg: number };
   weeklyVolume: Record<string, number>;
   isProteinReachedToday: boolean;
+
+  user: User | null;
+  session: Session | null;
+  checkSession: () => Promise<void>;
+  signOut: () => Promise<void>;
 
   bootstrap: () => void;
   switchDay: (dayId: string) => void;
@@ -89,6 +96,31 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   stats: { count: 0, tonnageKg: 0 },
   weeklyVolume: { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0 },
   isProteinReachedToday: false,
+
+  user: null,
+  session: null,
+
+  checkSession: async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      set({ session, user: session?.user || null });
+
+      supabase.auth.onAuthStateChange((_event, session) => {
+        set({ session, user: session?.user || null });
+      });
+    } catch (e) {
+      console.warn('Supabase auth session error:', e);
+    }
+  },
+
+  signOut: async () => {
+    try {
+      await supabase.auth.signOut();
+      set({ session: null, user: null });
+    } catch (e) {
+      console.warn('Sign out error:', e);
+    }
+  },
 
   bootstrap: () => {
     const days = getAllWorkoutDays();
