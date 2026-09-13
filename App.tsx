@@ -26,14 +26,10 @@ import {
   WifiOff,
   Camera,
   Activity,
-  History,
-  LogIn,
-  LogOut,
-  UserCheck
+  History
 } from 'lucide-react-native';
 import { initDatabase } from './src/db/database';
 import { useWorkoutStore } from './src/store/workoutStore';
-import { AuthModal } from './src/components/AuthModal';
 
 const ASSETS = {
   bgSplash: require('./assets/custom/bg-splash.jpg'),
@@ -57,7 +53,6 @@ export default function App() {
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [isVolumeModalOpen, setIsVolumeModalOpen] = useState(false);
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [aiNote, setAiNote] = useState('');
 
   const [weightInput, setWeightInput] = useState('');
@@ -71,7 +66,6 @@ export default function App() {
   useEffect(() => {
     initDatabase();
     store.bootstrap();
-    store.checkSession();
   }, []);
 
   useEffect(() => {
@@ -156,24 +150,6 @@ export default function App() {
           <View style={styles.splashContent}>
             <Text style={styles.splashTitle}>IronTracker</Text>
 
-            {/* Явная крупная кнопка авторизации прямо на старте */}
-            {store.user ? (
-              <View style={styles.authStatusBox}>
-                <UserCheck size={16} color="#10B981" />
-                <Text style={styles.authStatusText} numberOfLines={1}>
-                  Аккаунт: {store.user.email}
-                </Text>
-                <TouchableOpacity onPress={() => store.signOut()} style={styles.smallSignOutBtn}>
-                  <Text style={styles.smallSignOutText}>Выйти</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.splashMainAuthBtn} onPress={() => setIsAuthOpen(true)}>
-                <LogIn size={18} color="#042F2E" />
-                <Text style={styles.splashMainAuthText}>Войти / Создать аккаунт</Text>
-              </TouchableOpacity>
-            )}
-
             <TouchableOpacity style={styles.splashBtn} onPress={() => setScreen('workout')}>
               <Text style={styles.splashBtnText}>Начать тренировку</Text>
             </TouchableOpacity>
@@ -185,7 +161,6 @@ export default function App() {
         </SafeAreaView>
 
         {renderProfileModal()}
-        <AuthModal visible={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </ImageBackground>
     );
   }
@@ -210,9 +185,7 @@ export default function App() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.navProfileBtn} onPress={() => setIsProfileOpen(true)}>
-              <Text style={styles.navProfileName}>
-                {store.user ? (store.user.email?.split('@')[0] || store.profile.username) : store.profile.username}
-              </Text>
+              <Text style={styles.navProfileName}>{store.profile.username}</Text>
               <Image source={avatarSource} style={styles.navAvatar} />
             </TouchableOpacity>
           </View>
@@ -330,7 +303,7 @@ export default function App() {
             })}
           </ScrollView>
 
-          {/* Карточка активного упражнения */}
+          {/* Карточка упражнения */}
           {activeExercise && (
             <View style={styles.exerciseCard}>
               <View style={styles.exHeader}>
@@ -484,7 +457,6 @@ export default function App() {
         {renderVolumeModal()}
         {renderDayPickerModal()}
         {renderAiModal()}
-        <AuthModal visible={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </SafeAreaView>
     </ImageBackground>
   );
@@ -511,29 +483,13 @@ export default function App() {
                   <Camera size={12} color="#FFFFFF" />
                 </View>
               </TouchableOpacity>
-              <Text style={styles.profileUsername}>
-                {store.user ? (store.user.email?.split('@')[0] || store.profile.username) : store.profile.username}
-              </Text>
-            </View>
-
-            <View style={styles.accountCard}>
-              {store.user ? (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <UserCheck size={16} color="#10B981" />
-                    <Text style={styles.accountEmailText} numberOfLines={1}>{store.user.email}</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => store.signOut()} style={styles.logoutBtn}>
-                    <LogOut size={13} color="#EF4444" />
-                    <Text style={styles.logoutBtnText}>Выйти</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity onPress={() => { setIsProfileOpen(false); setIsAuthOpen(true); }} style={styles.loginBannerBtn}>
-                  <LogIn size={15} color="#0D9488" />
-                  <Text style={styles.loginBannerText}>Войти / Зарегистрироваться</Text>
-                </TouchableOpacity>
-              )}
+              <TextInput
+                style={[styles.inlineInput, { marginTop: 8, textAlign: 'center', width: 140 }]}
+                value={store.profile.username}
+                onChangeText={(val) => store.updateProfileData({ username: val })}
+                placeholder="Позывной"
+                placeholderTextColor="#71717A"
+              />
             </View>
 
             <View style={styles.profileStatsRow}>
@@ -551,7 +507,7 @@ export default function App() {
               </View>
             </View>
 
-            <Text style={styles.profileParamsHeading}>Параметры атлета (нажми для изменения)</Text>
+            <Text style={styles.profileParamsHeading}>Параметры атлета</Text>
 
             <View style={styles.profileParamsTable}>
               <View style={styles.paramRow}>
@@ -730,18 +686,9 @@ export default function App() {
 
 const styles = StyleSheet.create({
   splashBg: { flex: 1, width: '100%', height: '100%' },
-  splashOverlay: { flex: 1, backgroundColor: 'rgba(5, 15, 18, 0.45)', justifyContent: 'space-between', padding: 24 },
+  splashOverlay: { flex: 1, backgroundColor: 'rgba(5, 15, 18, 0.4)', justifyContent: 'space-between', padding: 24 },
   splashContent: { width: '100%', alignItems: 'center', paddingBottom: 40 },
-  splashTitle: { fontSize: 36, fontWeight: '800', color: '#6EE7B7', letterSpacing: 1.5, marginBottom: 20, textShadowColor: '#000', textShadowRadius: 10 },
-  
-  splashMainAuthBtn: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2DD4BF', paddingVertical: 15, borderRadius: 10, marginBottom: 12, shadowColor: '#2DD4BF', shadowOpacity: 0.4, shadowRadius: 10 },
-  splashMainAuthText: { color: '#042F2E', fontSize: 16, fontWeight: '800' },
-  
-  authStatusBox: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(6, 44, 34, 0.85)', borderWidth: 1, borderColor: '#10B981', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, marginBottom: 12 },
-  authStatusText: { color: '#6EE7B7', fontSize: 13, fontWeight: '700', flex: 1, marginHorizontal: 8 },
-  smallSignOutBtn: { backgroundColor: 'rgba(239, 68, 68, 0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  smallSignOutText: { color: '#FCA5A5', fontSize: 11, fontWeight: '700' },
-
+  splashTitle: { fontSize: 36, fontWeight: '800', color: '#6EE7B7', letterSpacing: 1.5, marginBottom: 28, textShadowColor: '#000', textShadowRadius: 10 },
   splashBtn: { width: '100%', backgroundColor: 'rgba(16, 44, 46, 0.85)', borderWidth: 1, borderColor: '#2DD4BF', paddingVertical: 15, borderRadius: 10, alignItems: 'center', marginBottom: 12 },
   splashBtnText: { color: '#E6FFFA', fontSize: 16, fontWeight: '700' },
   splashBtnSecondary: { width: '100%', backgroundColor: 'rgba(10, 25, 28, 0.75)', borderWidth: 1, borderColor: '#1F4B4E', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
@@ -870,14 +817,6 @@ const styles = StyleSheet.create({
   avatarPickerWrapper: { position: 'relative' },
   profileLargeAvatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: '#27272A' },
   avatarCameraBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#10B981', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#09090B' },
-  profileUsername: { fontSize: 16, fontWeight: '800', color: '#F4F4F5', marginTop: 6 },
-
-  accountCard: { backgroundColor: '#18181B', borderRadius: 8, padding: 10, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: '#27272A' },
-  accountEmailText: { fontSize: 12, fontWeight: '700', color: '#F4F4F5', maxWidth: 170 },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(239, 68, 68, 0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  logoutBtnText: { fontSize: 11, fontWeight: '700', color: '#EF4444' },
-  loginBannerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
-  loginBannerText: { fontSize: 12, fontWeight: '800', color: '#2DD4BF' },
 
   profileStatsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#27272A', marginBottom: 14 },
   profileStatCol: { alignItems: 'center' },

@@ -1,6 +1,4 @@
 import { create } from 'zustand';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../services/supabase';
 import { 
   getAllWorkoutDays, 
   getExercisesForDay, 
@@ -49,17 +47,12 @@ interface WorkoutState {
   isTimerActive: boolean;
   isAiLoading: boolean;
 
-  user: User | null;
-  session: Session | null;
-
   profile: UserProfile;
   stats: { count: number; tonnageKg: number };
   weeklyVolume: Record<string, number>;
   isProteinReachedToday: boolean;
 
   bootstrap: () => void;
-  checkSession: () => Promise<void>;
-  signOut: () => Promise<void>;
   switchDay: (dayId: string) => void;
   selectExercise: (index: number) => void;
   updateSet: (setId: number, field: 'weight' | 'reps' | 'rir', delta: number) => void;
@@ -84,9 +77,6 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   timerSeconds: 0,
   isTimerActive: false,
   isAiLoading: false,
-
-  user: null,
-  session: null,
 
   profile: {
     username: 'chuvak',
@@ -115,28 +105,6 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       isProteinReachedToday: protein
     });
     get().switchDay(days[0]?.id || 'push');
-  },
-
-  checkSession: async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      set({ session, user: session?.user || null });
-
-      supabase.auth.onAuthStateChange((_event, session) => {
-        set({ session, user: session?.user || null });
-      });
-    } catch (e) {
-      console.log('Supabase session check error:', e);
-    }
-  },
-
-  signOut: async () => {
-    try {
-      await supabase.auth.signOut();
-      set({ session: null, user: null });
-    } catch (e) {
-      console.log('SignOut error:', e);
-    }
   },
 
   switchDay: (dayId: string) => {
@@ -242,7 +210,6 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         const st = getWorkoutStats();
         const vol = getWeeklyVolumeByMuscle();
 
-        // Персональный интервал отдыха для конкретного упражнения
         const restDuration = currentEx.def.rest_seconds || profile.rest_seconds || 90;
 
         return { 
@@ -263,10 +230,10 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     if (!current || current.sets.length === 0) return;
 
     const completed = current.sets.filter(s => s.isCompleted);
-    const setsToAnalyze = completed.length > 0 ? completed : current.sets;
+    const setsToAlias = completed.length > 0 ? completed : current.sets;
 
     const res = computeNextTarget(
-      setsToAnalyze, 
+      setsToAlias, 
       current.def.target_min_reps, 
       current.def.target_max_reps, 
       current.def.weight_step
