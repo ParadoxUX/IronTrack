@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "IronTrack",
+    "slug": "irontrack",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/custom/avatar.jpg",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/custom/bg-splash.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#050F12"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.paradox.irontrack",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Доступ к медиатеке необходим для выбора аватара атлета."
+      }
+    },
+    "plugins": [
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Разрешите доступ к фото для смены аватарки профиля."
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,47 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: 📥 Клонирование репозитория
+        uses: actions/checkout@v4
+
+      - name: 🟢 Установка Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Установка зависимостей
+        run: npm ci
+
+      - name: ⚙️ Генерация нативного iOS проекта
+        run: npx expo prebuild --platform ios
+
+      - name: 🔨 Компиляция Payload и сборка IPA
+        run: |
+          cd ios
+          xcodebuild -workspace IronTrack.xcworkspace \
+                     -scheme IronTrack \
+                     -configuration Release \
+                     -destination 'generic/platform=iOS' \
+                     -archivePath ./build/IronTrack.xcarchive \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     archive
+
+          mkdir -p Payload
+          cp -r ./build/IronTrack.xcarchive/Products/Applications/IronTrack.app ./Payload/
+          zip -r IronTrack.ipa Payload
+
+      - name: 📤 Загрузка готового IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: IronTrack-unsigned-ipa
+          path: ios/IronTrack.ipa
+          retention-days: 7
