@@ -21,29 +21,29 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Клонирование
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 🟢 Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: 📦 Установка библиотек
+      - name: Install Dependencies
         run: npm ci
 
-      - name: 🏗️ Сборка веб-версии
-        run: npx expo export -p web
+      - name: Export Web Bundle
+        run: npx expo export --platform web
 
-      - name: ⚙️ Настройка GitHub Pages
+      - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: 📤 Загрузка артефактов Pages
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
-      - name: 🚀 Публикация на сайт
+      - name: Deploy to Pages
         id: deployment
         uses: actions/deploy-pages@v4
