@@ -18,6 +18,14 @@
         "NSPhotoLibraryUsageDescription": "Доступ к медиатеке необходим для выбора аватара атлета."
       }
     },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/custom/avatar.jpg"
+    },
+    "experiments": {
+      "baseUrl": "/IronTrack"
+    },
     "plugins": [
       "expo-sqlite",
       [
