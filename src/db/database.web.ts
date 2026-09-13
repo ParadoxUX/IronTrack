@@ -9,6 +9,7 @@ export interface ExerciseDef {
   target_max_reps: number;
   tempo: string;
   order_index: number;
+  rest_seconds: number;
 }
 
 export interface UserProfile {
@@ -28,36 +29,40 @@ export interface PastSet {
 }
 
 const DEFAULT_DAYS = [
-  { id: 'push', title: 'День 1: Жим (Грудь / Дельты)' },
-  { id: 'pull', title: 'День 2: Тяга (Спина / Руки)' },
-  { id: 'legs', title: 'День 3: Ноги (Жим платформы / Икры)' },
-  { id: 'upper', title: 'День 4: Верх тела (Симметрия)' },
+  { id: 'push', title: 'День 1: Жим (Грудь / Дельты / Трицепс)' },
+  { id: 'pull', title: 'День 2: Тяга (Широчайшие / Трапеции / Бицепс)' },
+  { id: 'legs', title: 'День 3: Ноги (Квадрицепс / Бицепс бедра / Икры)' },
+  { id: 'upper', title: 'День 4: Верх тела (Осанка / Баланс / Руки)' },
 ];
 
 const DEFAULT_EXERCISES: ExerciseDef[] = [
-  // PUSH
-  { id: 'p1', day_id: 'push', name: 'Жим гантелей на наклонной скамье 30°', target_muscle: 'chest', default_weight: 22, weight_step: 2, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 1 },
-  { id: 'p2', day_id: 'push', name: 'Отжимания на брусьях / гравитроне', target_muscle: 'chest', default_weight: 0, weight_step: 2.5, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 2 },
-  { id: 'p3', day_id: 'push', name: 'Махи с гантелями в стороны стоя', target_muscle: 'shoulders', default_weight: 10, weight_step: 1, target_min_reps: 12, target_max_reps: 15, tempo: '2-1-2', order_index: 3 },
-  { id: 'p4', day_id: 'push', name: 'Французский жим с гантелями лёжа', target_muscle: 'arms', default_weight: 12, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 4 },
+  // ДЕНЬ 1: PUSH (5 упражнений)
+  { id: 'p1', day_id: 'push', name: 'Жим гантелей на наклонной скамье 30°', target_muscle: 'chest', default_weight: 22, weight_step: 2, target_min_reps: 8, target_max_reps: 10, tempo: '3-1-1', order_index: 1, rest_seconds: 150 },
+  { id: 'p2', day_id: 'push', name: 'Отжимания на брусьях / гравитроне', target_muscle: 'chest', default_weight: 0, weight_step: 2.5, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 2, rest_seconds: 120 },
+  { id: 'p3', day_id: 'push', name: 'Жим сидя в тренажере на дельты / скамья 75°', target_muscle: 'shoulders', default_weight: 18, weight_step: 2, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 3, rest_seconds: 120 },
+  { id: 'p4', day_id: 'push', name: 'Махи с гантелями в стороны стоя', target_muscle: 'shoulders', default_weight: 10, weight_step: 1, target_min_reps: 12, target_max_reps: 15, tempo: '2-1-2', order_index: 4, rest_seconds: 75 },
+  { id: 'p5', day_id: 'push', name: 'Разгибания на трицепс на верхнем блоке (канат)', target_muscle: 'arms', default_weight: 20, weight_step: 2.5, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 5, rest_seconds: 75 },
 
-  // PULL
-  { id: 'pl1', day_id: 'pull', name: 'Тяга верхнего блока к груди', target_muscle: 'back', default_weight: 55, weight_step: 5, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 1 },
-  { id: 'pl2', day_id: 'pull', name: 'Горизонтальная тяга блока к поясу', target_muscle: 'back', default_weight: 50, weight_step: 5, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 2 },
-  { id: 'pl3', day_id: 'pull', name: 'Face Pulls (Тяга каната к лицу)', target_muscle: 'shoulders', default_weight: 25, weight_step: 2.5, target_min_reps: 12, target_max_reps: 15, tempo: '2-1-2', order_index: 3 },
-  { id: 'pl4', day_id: 'pull', name: 'Сгибания рук с гантелями сидя', target_muscle: 'arms', default_weight: 14, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 4 },
+  // ДЕНЬ 2: PULL (5 упражнений)
+  { id: 'pl1', day_id: 'pull', name: 'Тяга верхнего блока к груди широким хватом', target_muscle: 'back', default_weight: 55, weight_step: 5, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 1, rest_seconds: 150 },
+  { id: 'pl2', day_id: 'pull', name: 'Горизонтальная тяга блока к поясу сидя', target_muscle: 'back', default_weight: 50, weight_step: 5, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 2, rest_seconds: 120 },
+  { id: 'pl3', day_id: 'pull', name: 'Тяга гантели одной рукой в упоре на скамью', target_muscle: 'back', default_weight: 24, weight_step: 2, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 3, rest_seconds: 120 },
+  { id: 'pl4', day_id: 'pull', name: 'Face Pulls (Тяга каната к лицу на заднюю дельту)', target_muscle: 'shoulders', default_weight: 25, weight_step: 2.5, target_min_reps: 12, target_max_reps: 15, tempo: '2-1-2', order_index: 4, rest_seconds: 75 },
+  { id: 'pl5', day_id: 'pull', name: 'Сгибания рук с гантелями сидя на скамье (бицепс)', target_muscle: 'arms', default_weight: 14, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 5, rest_seconds: 75 },
 
-  // LEGS
-  { id: 'l1', day_id: 'legs', name: 'Жим ногами в тренажере', target_muscle: 'legs', default_weight: 120, weight_step: 10, target_min_reps: 10, target_max_reps: 15, tempo: '3-1-1', order_index: 1 },
-  { id: 'l2', day_id: 'legs', name: 'Сгибания ног лежа в тренажере', target_muscle: 'legs', default_weight: 40, weight_step: 5, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 2 },
-  { id: 'l3', day_id: 'legs', name: 'Разгибания ног в тренажере', target_muscle: 'legs', default_weight: 45, weight_step: 5, target_min_reps: 12, target_max_reps: 15, tempo: '2-1-2', order_index: 3 },
-  { id: 'l4', day_id: 'legs', name: 'Подъемы на носки в тренажере', target_muscle: 'legs', default_weight: 50, weight_step: 5, target_min_reps: 12, target_max_reps: 15, tempo: '2-2-1', order_index: 4 },
+  // ДЕНЬ 3: LEGS (5 упражнений)
+  { id: 'l1', day_id: 'legs', name: 'Жим ногами в тренажере (без осевой нагрузки)', target_muscle: 'legs', default_weight: 130, weight_step: 10, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 1, rest_seconds: 180 },
+  { id: 'l2', day_id: 'legs', name: 'Сгибания ног лежа в тренажере', target_muscle: 'legs', default_weight: 40, weight_step: 5, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 2, rest_seconds: 90 },
+  { id: 'l3', day_id: 'legs', name: 'Разгибания ног сидя в тренажере', target_muscle: 'legs', default_weight: 45, weight_step: 5, target_min_reps: 12, target_max_reps: 15, tempo: '2-1-2', order_index: 3, rest_seconds: 90 },
+  { id: 'l4', day_id: 'legs', name: 'Болгарские выпады с гантелями в руках', target_muscle: 'legs', default_weight: 14, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 4, rest_seconds: 120 },
+  { id: 'l5', day_id: 'legs', name: 'Подъемы на носки стоя в тренажере (икры)', target_muscle: 'legs', default_weight: 50, weight_step: 5, target_min_reps: 12, target_max_reps: 15, tempo: '2-2-1', order_index: 5, rest_seconds: 60 },
 
-  // UPPER
-  { id: 'u1', day_id: 'upper', name: 'Жим гантелей сидя на скамье 75°', target_muscle: 'shoulders', default_weight: 18, weight_step: 2, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 1 },
-  { id: 'u2', day_id: 'upper', name: 'Тяга гантели одной рукой в упоре', target_muscle: 'back', default_weight: 24, weight_step: 2, target_min_reps: 8, target_max_reps: 12, tempo: '3-1-1', order_index: 2 },
-  { id: 'u3', day_id: 'upper', name: 'Сведения в тренажере Бабочка', target_muscle: 'chest', default_weight: 45, weight_step: 5, target_min_reps: 10, target_max_reps: 15, tempo: '3-1-1', order_index: 3 },
-  { id: 'u4', day_id: 'upper', name: 'Молотковые сгибания с гантелями', target_muscle: 'arms', default_weight: 14, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 4 },
+  // ДЕНЬ 4: UPPER (5 упражнений)
+  { id: 'u1', day_id: 'upper', name: 'Сведения рук в тренажере Бабочка (Pec-Deck)', target_muscle: 'chest', default_weight: 45, weight_step: 5, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 1, rest_seconds: 90 },
+  { id: 'u2', day_id: 'upper', name: 'Пуловер с гантелью лежа поперек скамьи', target_muscle: 'back', default_weight: 20, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 2, rest_seconds: 90 },
+  { id: 'u3', day_id: 'upper', name: 'Отведения назад в тренажере (Reverse Pec-Deck)', target_muscle: 'shoulders', default_weight: 35, weight_step: 5, target_min_reps: 12, target_max_reps: 15, tempo: '2-1-2', order_index: 3, rest_seconds: 75 },
+  { id: 'u4', day_id: 'upper', name: 'Молотковые сгибания с гантелями (брахиалис)', target_muscle: 'arms', default_weight: 14, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 4, rest_seconds: 75 },
+  { id: 'u5', day_id: 'upper', name: 'Французский жим с гантелями лежа на скамье', target_muscle: 'arms', default_weight: 12, weight_step: 2, target_min_reps: 10, target_max_reps: 12, tempo: '3-1-1', order_index: 5, rest_seconds: 75 },
 ];
 
 const STORAGE_KEYS = {

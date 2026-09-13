@@ -60,7 +60,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [aiNote, setAiNote] = useState('');
 
-  // Локальные поля параметров
+  // Поля ввода параметров атлета
   const [weightInput, setWeightInput] = useState('');
   const [heightInput, setHeightInput] = useState('');
   const [benchInput, setBenchInput] = useState('');
@@ -72,8 +72,8 @@ export default function App() {
   useEffect(() => {
     initDatabase();
     store.bootstrap();
-    
-    // Проверяем сессию: если не вошел — сразу показываем форму входа
+
+    // Автоматический вызов формы авторизации, если пользователь не авторизован
     store.checkSession().then(() => {
       const state = useWorkoutStore.getState();
       if (!state.user) {
@@ -82,13 +82,13 @@ export default function App() {
     });
   }, []);
 
-  // Синхронизируем инпуты профиля с хранилищем при открытии
+  // Синхронизация полей ввода профиля с состоянием хранилища
   useEffect(() => {
     if (store.profile) {
-      setWeightInput(String(store.profile.body_weight || 75));
-      setHeightInput(String(store.profile.height || 180));
-      setBenchInput(String(store.profile.max_bench || 60));
-      setRestInput(String(store.profile.rest_seconds || 90));
+      setWeightInput(String(store.profile.body_weight ?? 75));
+      setHeightInput(String(store.profile.height ?? 180));
+      setBenchInput(String(store.profile.max_bench ?? 60));
+      setRestInput(String(store.profile.rest_seconds ?? 90));
     }
   }, [store.profile, isProfileOpen]);
 
@@ -148,7 +148,7 @@ export default function App() {
       max_bench: b,
       rest_seconds: r,
     });
-    Alert.alert('Готово', 'Параметры атлета сохранены!');
+    Alert.alert('Успешно', 'Параметры атлета обновлены!');
   };
 
   const avatarSource = store.profile.avatar_uri 
@@ -221,7 +221,7 @@ export default function App() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-          {/* Виджет-панель сверху */}
+          {/* Панель виджетов */}
           <View style={styles.dashboardCard}>
             <View style={styles.dashTopRow}>
               <View style={styles.calendarBox}>
@@ -284,7 +284,7 @@ export default function App() {
             </View>
           </View>
 
-          {/* Плашка белка */}
+          {/* Плашка белкового якоря */}
           <TouchableOpacity 
             style={[styles.proteinBanner, store.isProteinReachedToday && styles.proteinBannerDone]}
             onPress={store.toggleProtein}
@@ -338,15 +338,20 @@ export default function App() {
                 <Text style={styles.exTitle}>{activeExercise.def.name}</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   <View style={styles.tempoBadge}>
-                    <Text style={styles.tempoBadgeText}>⚡ ТЕМП: {activeExercise.def.tempo} (3с негатив)</Text>
+                    <Text style={styles.tempoBadgeText}>⚡ ТЕМП: {activeExercise.def.tempo}</Text>
                   </View>
                   <View style={styles.muscleBadge}>
                     <Text style={styles.muscleBadgeText}>Фокус: {activeExercise.def.target_muscle.toUpperCase()}</Text>
                   </View>
+                  <View style={[styles.tempoBadge, { borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                    <Text style={[styles.tempoBadgeText, { color: '#6EE7B7' }]}>
+                      ⏱ ОТДЫХ: {Math.floor((activeExercise.def.rest_seconds || 90) / 60)} мин {((activeExercise.def.rest_seconds || 90) % 60) > 0 ? `${(activeExercise.def.rest_seconds || 90) % 60}с` : ''}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              {/* Цель Gemini */}
+              {/* План прогрессии / Gemini */}
               {activeExercise.aiInsight ? (
                 <View style={styles.aiInsightBox}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -466,7 +471,7 @@ export default function App() {
           <Text style={styles.watermark}>IronTracker • Hypertrophy Engine</Text>
         </ScrollView>
 
-        {/* Таймер отдыха */}
+        {/* Плавающий таймер отдыха */}
         {store.isTimerActive && (
           <View style={styles.floatingTimer}>
             <Text style={styles.floatingTimerLabel}>ОТДЫХ МЕЖДУ СЕТАМИ</Text>
@@ -486,7 +491,7 @@ export default function App() {
     </ImageBackground>
   );
 
-  // МОДАЛКА ПРОФИЛЯ С ПРЯМЫМ РЕДАКТИРОВАНИЕМ
+  // Модальное окно профиля с полями для ввода
   function renderProfileModal() {
     const tonnageTons = (store.stats.tonnageKg / 1000).toFixed(1);
 
@@ -513,7 +518,6 @@ export default function App() {
               </Text>
             </View>
 
-            {/* Карточка аккаунта */}
             <View style={styles.accountCard}>
               {store.user ? (
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
@@ -551,7 +555,6 @@ export default function App() {
 
             <Text style={styles.profileParamsHeading}>Параметры атлета (нажми для изменения)</Text>
 
-            {/* Инпуты открыты для ввода всегда */}
             <View style={styles.profileParamsTable}>
               <View style={styles.paramRow}>
                 <Text style={styles.paramLabel}>Вес тела (кг)</Text>
@@ -578,7 +581,7 @@ export default function App() {
               </View>
 
               <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>Отдых (сек)</Text>
+                <Text style={styles.paramLabel}>Отдых по умолч. (сек)</Text>
                 <TextInput
                   style={styles.inlineInput}
                   keyboardType="numeric"

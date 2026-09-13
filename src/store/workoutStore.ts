@@ -49,17 +49,17 @@ interface WorkoutState {
   isTimerActive: boolean;
   isAiLoading: boolean;
 
+  user: User | null;
+  session: Session | null;
+
   profile: UserProfile;
   stats: { count: number; tonnageKg: number };
   weeklyVolume: Record<string, number>;
   isProteinReachedToday: boolean;
 
-  user: User | null;
-  session: Session | null;
+  bootstrap: () => void;
   checkSession: () => Promise<void>;
   signOut: () => Promise<void>;
-
-  bootstrap: () => void;
   switchDay: (dayId: string) => void;
   selectExercise: (index: number) => void;
   updateSet: (setId: number, field: 'weight' | 'reps' | 'rir', delta: number) => void;
@@ -85,6 +85,9 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   isTimerActive: false,
   isAiLoading: false,
 
+  user: null,
+  session: null,
+
   profile: {
     username: 'chuvak',
     avatar_uri: null,
@@ -96,31 +99,6 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   stats: { count: 0, tonnageKg: 0 },
   weeklyVolume: { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0 },
   isProteinReachedToday: false,
-
-  user: null,
-  session: null,
-
-  checkSession: async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      set({ session, user: session?.user || null });
-
-      supabase.auth.onAuthStateChange((_event, session) => {
-        set({ session, user: session?.user || null });
-      });
-    } catch (e) {
-      console.warn('Supabase auth session error:', e);
-    }
-  },
-
-  signOut: async () => {
-    try {
-      await supabase.auth.signOut();
-      set({ session: null, user: null });
-    } catch (e) {
-      console.warn('Sign out error:', e);
-    }
-  },
 
   bootstrap: () => {
     const days = getAllWorkoutDays();
@@ -137,6 +115,28 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       isProteinReachedToday: protein
     });
     get().switchDay(days[0]?.id || 'push');
+  },
+
+  checkSession: async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      set({ session, user: session?.user || null });
+
+      supabase.auth.onAuthStateChange((_event, session) => {
+        set({ session, user: session?.user || null });
+      });
+    } catch (e) {
+      console.log('Supabase session check error:', e);
+    }
+  },
+
+  signOut: async () => {
+    try {
+      await supabase.auth.signOut();
+      set({ session: null, user: null });
+    } catch (e) {
+      console.log('SignOut error:', e);
+    }
   },
 
   switchDay: (dayId: string) => {
@@ -241,12 +241,16 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
         saveCompletedSet(workoutId, currentEx.def.id, targetSet.weight, targetSet.reps, targetSet.rir);
         const st = getWorkoutStats();
         const vol = getWeeklyVolumeByMuscle();
+
+        // Персональный интервал отдыха для конкретного упражнения
+        const restDuration = currentEx.def.rest_seconds || profile.rest_seconds || 90;
+
         return { 
           exercises: updated, 
           stats: st, 
           weeklyVolume: vol, 
           isTimerActive: true, 
-          timerSeconds: profile.rest_seconds || 90 
+          timerSeconds: restDuration 
         };
       }
       return { exercises: updated };
