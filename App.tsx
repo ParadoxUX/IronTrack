@@ -25,7 +25,6 @@ import {
   Sparkles,
   WifiOff,
   Camera,
-  Edit3,
   Activity,
   History,
   LogIn,
@@ -61,11 +60,11 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [aiNote, setAiNote] = useState('');
 
-  const [isEditingParams, setIsEditingParams] = useState(false);
-  const [editWeight, setEditWeight] = useState('');
-  const [editHeight, setEditHeight] = useState('');
-  const [editBench, setEditBench] = useState('');
-  const [editRest, setEditRest] = useState('');
+  // Локальные поля параметров
+  const [weightInput, setWeightInput] = useState('');
+  const [heightInput, setHeightInput] = useState('');
+  const [benchInput, setBenchInput] = useState('');
+  const [restInput, setRestInput] = useState('');
 
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlayingMusic, setIsPlayingMusic] = useState(false);
@@ -73,8 +72,25 @@ export default function App() {
   useEffect(() => {
     initDatabase();
     store.bootstrap();
-    store.checkSession();
+    
+    // Проверяем сессию: если не вошел — сразу показываем форму входа
+    store.checkSession().then(() => {
+      const state = useWorkoutStore.getState();
+      if (!state.user) {
+        setIsAuthOpen(true);
+      }
+    });
   }, []);
+
+  // Синхронизируем инпуты профиля с хранилищем при открытии
+  useEffect(() => {
+    if (store.profile) {
+      setWeightInput(String(store.profile.body_weight || 75));
+      setHeightInput(String(store.profile.height || 180));
+      setBenchInput(String(store.profile.max_bench || 60));
+      setRestInput(String(store.profile.rest_seconds || 90));
+    }
+  }, [store.profile, isProfileOpen]);
 
   useEffect(() => {
     let interval: any;
@@ -119,23 +135,20 @@ export default function App() {
     }
   };
 
-  const startEditingParams = () => {
-    setEditWeight(String(store.profile.body_weight));
-    setEditHeight(String(store.profile.height));
-    setEditBench(String(store.profile.max_bench));
-    setEditRest(String(store.profile.rest_seconds));
-    setIsEditingParams(true);
-  };
+  const saveUpdatedParams = () => {
+    const w = parseFloat(weightInput) || store.profile.body_weight;
+    const h = parseFloat(heightInput) || store.profile.height;
+    const b = parseFloat(benchInput) || store.profile.max_bench;
+    const r = parseInt(restInput, 10) || store.profile.rest_seconds;
 
-  const saveParams = () => {
-    const w = parseFloat(editWeight) || store.profile.body_weight;
     store.addWeightLog(w);
     store.updateProfileData({
-      height: parseFloat(editHeight) || store.profile.height,
-      max_bench: parseFloat(editBench) || store.profile.max_bench,
-      rest_seconds: parseInt(editRest, 10) || store.profile.rest_seconds,
+      body_weight: w,
+      height: h,
+      max_bench: b,
+      rest_seconds: r,
     });
-    setIsEditingParams(false);
+    Alert.alert('Готово', 'Параметры атлета сохранены!');
   };
 
   const avatarSource = store.profile.avatar_uri 
@@ -151,11 +164,24 @@ export default function App() {
           <View style={{ flex: 1 }} />
           <View style={styles.splashContent}>
             <Text style={styles.splashTitle}>IronTracker</Text>
-            <TouchableOpacity style={styles.splashBtn} onPress={() => setScreen('workout')}>
-              <Text style={styles.splashBtnText}>Начать тренировку</Text>
-            </TouchableOpacity>
+
+            {store.user ? (
+              <>
+                <Text style={styles.welcomeUserText}>
+                  Атлет: {store.user.email?.split('@')[0]} ✓
+                </Text>
+                <TouchableOpacity style={styles.splashBtn} onPress={() => setScreen('workout')}>
+                  <Text style={styles.splashBtnText}>Продолжить тренировки</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <TouchableOpacity style={styles.splashBtn} onPress={() => setIsAuthOpen(true)}>
+                <Text style={styles.splashBtnText}>Войти / Создать аккаунт</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity style={styles.splashBtnSecondary} onPress={() => setIsProfileOpen(true)}>
-              <Text style={styles.splashBtnSecondaryText}>Профиль и параметры</Text>
+              <Text style={styles.splashBtnSecondaryText}>Параметры атлета</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -165,7 +191,7 @@ export default function App() {
     );
   }
 
-  // 2. РАБОЧИЙ ЭКРАН
+  // 2. РАБОЧИЙ ЭКРАН ТРЕНИРОВКИ
   return (
     <ImageBackground source={ASSETS.bgMain} style={styles.mainBg} resizeMode="cover">
       <StatusBar barStyle="light-content" />
@@ -198,7 +224,6 @@ export default function App() {
           {/* Виджет-панель сверху */}
           <View style={styles.dashboardCard}>
             <View style={styles.dashTopRow}>
-              {/* Мини-календарь */}
               <View style={styles.calendarBox}>
                 <Text style={styles.calMonthTitle}>September</Text>
                 <Text style={styles.calDaysHeader}>S M T W T F S</Text>
@@ -211,7 +236,6 @@ export default function App() {
                 </View>
               </View>
 
-              {/* Карточки */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cardsScroll}>
                 <Image source={ASSETS.card1} style={styles.posterThumb} resizeMode="cover" />
                 <Image source={ASSETS.card2} style={styles.posterThumb} resizeMode="cover" />
@@ -219,7 +243,7 @@ export default function App() {
               </ScrollView>
             </View>
 
-            {/* Плеер */}
+            {/* Аудиоплеер */}
             <View style={styles.dashBottomBar}>
               <View style={styles.trackInfoBlock}>
                 <Image source={avatarSource} style={styles.miniAvatar} />
@@ -260,7 +284,7 @@ export default function App() {
             </View>
           </View>
 
-          {/* Плашка белкового якоря */}
+          {/* Плашка белка */}
           <TouchableOpacity 
             style={[styles.proteinBanner, store.isProteinReachedToday && styles.proteinBannerDone]}
             onPress={store.toggleProtein}
@@ -307,12 +331,11 @@ export default function App() {
             })}
           </ScrollView>
 
-          {/* Карточка активного упражнения */}
+          {/* Карточка текущего упражнения */}
           {activeExercise && (
             <View style={styles.exerciseCard}>
               <View style={styles.exHeader}>
                 <Text style={styles.exTitle}>{activeExercise.def.name}</Text>
-                
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   <View style={styles.tempoBadge}>
                     <Text style={styles.tempoBadgeText}>⚡ ТЕМП: {activeExercise.def.tempo} (3с негатив)</Text>
@@ -323,7 +346,7 @@ export default function App() {
                 </View>
               </View>
 
-              {/* Gemini / Target */}
+              {/* Цель Gemini */}
               {activeExercise.aiInsight ? (
                 <View style={styles.aiInsightBox}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -463,14 +486,138 @@ export default function App() {
     </ImageBackground>
   );
 
-  // МОДАЛКА НЕДЕЛЬНОГО ОБЪЕМА
+  // МОДАЛКА ПРОФИЛЯ С ПРЯМЫМ РЕДАКТИРОВАНИЕМ
+  function renderProfileModal() {
+    const tonnageTons = (store.stats.tonnageKg / 1000).toFixed(1);
+
+    return (
+      <Modal visible={isProfileOpen} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.profileSheet}>
+            <View style={styles.profileSheetHeader}>
+              <Text style={styles.profileSheetTitle}>Профиль атлета</Text>
+              <TouchableOpacity onPress={() => setIsProfileOpen(false)} style={styles.profileCloseBtn}>
+                <X size={20} color="#18181B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.profileUserBlock}>
+              <TouchableOpacity onPress={pickImage} style={styles.avatarPickerWrapper}>
+                <Image source={avatarSource} style={styles.profileLargeAvatar} />
+                <View style={styles.avatarCameraBadge}>
+                  <Camera size={12} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.profileUsername}>
+                {store.user ? (store.user.email?.split('@')[0] || store.profile.username) : store.profile.username}
+              </Text>
+            </View>
+
+            {/* Карточка аккаунта */}
+            <View style={styles.accountCard}>
+              {store.user ? (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <UserCheck size={16} color="#10B981" />
+                    <Text style={styles.accountEmailText} numberOfLines={1}>{store.user.email}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => store.signOut()} style={styles.logoutBtn}>
+                    <LogOut size={13} color="#EF4444" />
+                    <Text style={styles.logoutBtnText}>Выйти</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity onPress={() => { setIsProfileOpen(false); setIsAuthOpen(true); }} style={styles.loginBannerBtn}>
+                  <LogIn size={15} color="#0D9488" />
+                  <Text style={styles.loginBannerText}>Войти / Зарегистрироваться</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.profileStatsRow}>
+              <View style={styles.profileStatCol}>
+                <Text style={styles.profileStatNumber}>{store.stats.count}</Text>
+                <Text style={styles.profileStatLabel}>Тренировок</Text>
+              </View>
+              <View style={styles.profileStatCol}>
+                <Text style={styles.profileStatNumber}>{tonnageTons} т</Text>
+                <Text style={styles.profileStatLabel}>Тоннаж</Text>
+              </View>
+              <View style={styles.profileStatCol}>
+                <Text style={styles.profileStatNumber}>{store.stats.count > 0 ? '1 день' : '0 дней'}</Text>
+                <Text style={styles.profileStatLabel}>Стрик</Text>
+              </View>
+            </View>
+
+            <Text style={styles.profileParamsHeading}>Параметры атлета (нажми для изменения)</Text>
+
+            {/* Инпуты открыты для ввода всегда */}
+            <View style={styles.profileParamsTable}>
+              <View style={styles.paramRow}>
+                <Text style={styles.paramLabel}>Вес тела (кг)</Text>
+                <TextInput
+                  style={styles.inlineInput}
+                  keyboardType="numeric"
+                  value={weightInput}
+                  onChangeText={setWeightInput}
+                  placeholder="75.0"
+                  placeholderTextColor="#71717A"
+                />
+              </View>
+
+              <View style={styles.paramRow}>
+                <Text style={styles.paramLabel}>Рост (см)</Text>
+                <TextInput
+                  style={styles.inlineInput}
+                  keyboardType="numeric"
+                  value={heightInput}
+                  onChangeText={setHeightInput}
+                  placeholder="180"
+                  placeholderTextColor="#71717A"
+                />
+              </View>
+
+              <View style={styles.paramRow}>
+                <Text style={styles.paramLabel}>Отдых (сек)</Text>
+                <TextInput
+                  style={styles.inlineInput}
+                  keyboardType="numeric"
+                  value={restInput}
+                  onChangeText={setRestInput}
+                  placeholder="90"
+                  placeholderTextColor="#71717A"
+                />
+              </View>
+
+              <View style={[styles.paramRow, { borderBottomWidth: 0 }]}>
+                <Text style={styles.paramLabel}>Лучший жим (кг)</Text>
+                <TextInput
+                  style={styles.inlineInput}
+                  keyboardType="numeric"
+                  value={benchInput}
+                  onChangeText={setBenchInput}
+                  placeholder="60.0"
+                  placeholderTextColor="#71717A"
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.saveParamsButton} onPress={saveUpdatedParams}>
+              <Text style={styles.saveParamsButtonText}>Сохранить изменения</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   function renderVolumeModal() {
     const muscles = [
       { key: 'chest', label: 'Грудь', count: store.weeklyVolume.chest || 0 },
-      { key: 'back', label: 'Спина (без осевой)', count: store.weeklyVolume.back || 0 },
-      { key: 'legs', label: 'Ноги (жим/сгибания)', count: store.weeklyVolume.legs || 0 },
+      { key: 'back', label: 'Спина', count: store.weeklyVolume.back || 0 },
+      { key: 'legs', label: 'Ноги', count: store.weeklyVolume.legs || 0 },
       { key: 'shoulders', label: 'Дельты', count: store.weeklyVolume.shoulders || 0 },
-      { key: 'arms', label: 'Руки (бицепс/трицепс)', count: store.weeklyVolume.arms || 0 },
+      { key: 'arms', label: 'Руки', count: store.weeklyVolume.arms || 0 },
     ];
 
     return (
@@ -513,146 +660,6 @@ export default function App() {
             <TouchableOpacity style={styles.modalDarkClose} onPress={() => setIsVolumeModalOpen(false)}>
               <Text style={{ color: '#94A3B8', fontWeight: '600' }}>Закрыть</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-    );
-  }
-
-  // МОДАЛКА ПРОФИЛЯ
-  function renderProfileModal() {
-    const tonnageTons = (store.stats.tonnageKg / 1000).toFixed(1);
-
-    return (
-      <Modal visible={isProfileOpen} transparent animationType="fade">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.profileSheet}>
-            <View style={styles.profileSheetHeader}>
-              <Text style={styles.profileSheetTitle}>Profile</Text>
-              <TouchableOpacity onPress={() => { setIsEditingParams(false); setIsProfileOpen(false); }} style={styles.profileCloseBtn}>
-                <X size={20} color="#18181B" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.profileUserBlock}>
-              <TouchableOpacity onPress={pickImage} style={styles.avatarPickerWrapper}>
-                <Image source={avatarSource} style={styles.profileLargeAvatar} />
-                <View style={styles.avatarCameraBadge}>
-                  <Camera size={12} color="#FFFFFF" />
-                </View>
-              </TouchableOpacity>
-              <Text style={styles.profileUsername}>
-                {store.user ? (store.user.email?.split('@')[0] || store.profile.username) : store.profile.username}
-              </Text>
-            </View>
-
-            {/* Блок облачного аккаунта Supabase */}
-            <View style={styles.accountCard}>
-              {store.user ? (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <UserCheck size={16} color="#10B981" />
-                    <Text style={styles.accountEmailText} numberOfLines={1}>{store.user.email}</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => store.signOut()} style={styles.logoutBtn}>
-                    <LogOut size={13} color="#EF4444" />
-                    <Text style={styles.logoutBtnText}>Выйти</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity onPress={() => { setIsProfileOpen(false); setIsAuthOpen(true); }} style={styles.loginBannerBtn}>
-                  <LogIn size={15} color="#0D9488" />
-                  <Text style={styles.loginBannerText}>Войти / Создать аккаунт (Облако)</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <View style={styles.profileStatsRow}>
-              <View style={styles.profileStatCol}>
-                <Text style={styles.profileStatNumber}>{store.stats.count}</Text>
-                <Text style={styles.profileStatLabel}>Тренировок</Text>
-              </View>
-              <View style={styles.profileStatCol}>
-                <Text style={styles.profileStatNumber}>{tonnageTons} т</Text>
-                <Text style={styles.profileStatLabel}>Тоннаж</Text>
-              </View>
-              <View style={styles.profileStatCol}>
-                <Text style={styles.profileStatNumber}>{store.stats.count > 0 ? '1 день' : '0 дней'}</Text>
-                <Text style={styles.profileStatLabel}>Стрик</Text>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, marginBottom: 8 }}>
-              <Text style={styles.profileParamsHeading}>Параметры атлета</Text>
-              {!isEditingParams ? (
-                <TouchableOpacity onPress={startEditingParams} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Edit3 size={13} color="#2563EB" />
-                  <Text style={{ fontSize: 12, color: '#2563EB', fontWeight: '700' }}>Изменить</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity onPress={saveParams} style={{ backgroundColor: '#10B981', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 }}>
-                  <Text style={{ fontSize: 12, color: '#000', fontWeight: '800' }}>Сохранить</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <View style={styles.profileParamsTable}>
-              <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>Утренний вес тела</Text>
-                {isEditingParams ? (
-                  <TextInput
-                    style={styles.inlineInput}
-                    keyboardType="numeric"
-                    value={editWeight}
-                    onChangeText={setEditWeight}
-                  />
-                ) : (
-                  <Text style={styles.paramValue}>{store.profile.body_weight} кг</Text>
-                )}
-              </View>
-
-              <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>Рост</Text>
-                {isEditingParams ? (
-                  <TextInput
-                    style={styles.inlineInput}
-                    keyboardType="numeric"
-                    value={editHeight}
-                    onChangeText={setEditHeight}
-                  />
-                ) : (
-                  <Text style={styles.paramValue}>{store.profile.height} см</Text>
-                )}
-              </View>
-
-              <View style={styles.paramRow}>
-                <Text style={styles.paramLabel}>Отдых между сетами</Text>
-                {isEditingParams ? (
-                  <TextInput
-                    style={styles.inlineInput}
-                    keyboardType="numeric"
-                    value={editRest}
-                    onChangeText={setEditRest}
-                  />
-                ) : (
-                  <Text style={styles.paramValue}>{store.profile.rest_seconds} сек</Text>
-                )}
-              </View>
-
-              <View style={[styles.paramRow, { borderBottomWidth: 0 }]}>
-                <Text style={styles.paramLabel}>Лучший жим</Text>
-                {isEditingParams ? (
-                  <TextInput
-                    style={styles.inlineInput}
-                    keyboardType="numeric"
-                    value={editBench}
-                    onChangeText={setEditBench}
-                  />
-                ) : (
-                  <Text style={styles.paramValue}>{store.profile.max_bench} кг</Text>
-                )}
-              </View>
-            </View>
           </View>
         </View>
       </Modal>
@@ -724,7 +731,8 @@ const styles = StyleSheet.create({
   splashBg: { flex: 1, width: '100%', height: '100%' },
   splashOverlay: { flex: 1, backgroundColor: 'rgba(5, 15, 18, 0.4)', justifyContent: 'space-between', padding: 24 },
   splashContent: { width: '100%', alignItems: 'center', paddingBottom: 40 },
-  splashTitle: { fontSize: 36, fontWeight: '800', color: '#6EE7B7', letterSpacing: 1.5, marginBottom: 28, textShadowColor: '#000', textShadowRadius: 10 },
+  splashTitle: { fontSize: 36, fontWeight: '800', color: '#6EE7B7', letterSpacing: 1.5, marginBottom: 20, textShadowColor: '#000', textShadowRadius: 10 },
+  welcomeUserText: { color: '#5EEAD4', fontSize: 14, fontWeight: '800', marginBottom: 14 },
   splashBtn: { width: '100%', backgroundColor: 'rgba(16, 44, 46, 0.85)', borderWidth: 1, borderColor: '#2DD4BF', paddingVertical: 15, borderRadius: 10, alignItems: 'center', marginBottom: 12 },
   splashBtnText: { color: '#E6FFFA', fontSize: 16, fontWeight: '700' },
   splashBtnSecondary: { width: '100%', backgroundColor: 'rgba(10, 25, 28, 0.75)', borderWidth: 1, borderColor: '#1F4B4E', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
@@ -843,36 +851,38 @@ const styles = StyleSheet.create({
   floatingTimerDigits: { color: '#F0FDFA', fontSize: 20, fontWeight: '800' },
   timerCloseBtn: { position: 'absolute', right: 12, top: 12 },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', padding: 20 },
-  profileSheet: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, width: '100%' },
-  profileSheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  profileSheetTitle: { fontSize: 18, fontWeight: '800', color: '#18181B', fontStyle: 'italic' },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 18 },
+  profileSheet: { backgroundColor: '#09090B', borderRadius: 16, padding: 20, width: '100%', borderWidth: 1, borderColor: '#27272A' },
+  profileSheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  profileSheetTitle: { fontSize: 18, fontWeight: '800', color: '#F4F4F5' },
   profileCloseBtn: { padding: 4 },
 
-  profileUserBlock: { alignItems: 'center', marginVertical: 10 },
+  profileUserBlock: { alignItems: 'center', marginBottom: 12 },
   avatarPickerWrapper: { position: 'relative' },
-  profileLargeAvatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: '#E4E4E7' },
-  avatarCameraBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#10B981', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF' },
-  profileUsername: { fontSize: 18, fontWeight: '800', color: '#18181B', marginTop: 6 },
+  profileLargeAvatar: { width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: '#27272A' },
+  avatarCameraBadge: { position: 'absolute', bottom: 0, right: 0, backgroundColor: '#10B981', width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#09090B' },
+  profileUsername: { fontSize: 16, fontWeight: '800', color: '#F4F4F5', marginTop: 6 },
 
-  accountCard: { backgroundColor: '#F4F4F5', borderRadius: 8, padding: 10, marginVertical: 8, alignItems: 'center' },
-  accountEmailText: { fontSize: 12, fontWeight: '700', color: '#09090B', maxWidth: 170 },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+  accountCard: { backgroundColor: '#18181B', borderRadius: 8, padding: 10, marginBottom: 12, alignItems: 'center', borderWidth: 1, borderColor: '#27272A' },
+  accountEmailText: { fontSize: 12, fontWeight: '700', color: '#F4F4F5', maxWidth: 170 },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(239, 68, 68, 0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   logoutBtnText: { fontSize: 11, fontWeight: '700', color: '#EF4444' },
   loginBannerBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
-  loginBannerText: { fontSize: 12, fontWeight: '800', color: '#0D9488' },
+  loginBannerText: { fontSize: 12, fontWeight: '800', color: '#2DD4BF' },
 
-  profileStatsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#F4F4F5', marginVertical: 6 },
+  profileStatsRow: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#27272A', marginBottom: 14 },
   profileStatCol: { alignItems: 'center' },
-  profileStatNumber: { fontSize: 16, fontWeight: '800', color: '#18181B' },
-  profileStatLabel: { fontSize: 11, color: '#71717A', marginTop: 2 },
+  profileStatNumber: { fontSize: 16, fontWeight: '800', color: '#F4F4F5' },
+  profileStatLabel: { fontSize: 11, color: '#A1A1AA', marginTop: 2 },
 
-  profileParamsHeading: { fontSize: 12, fontWeight: '800', color: '#71717A' },
-  profileParamsTable: { backgroundColor: '#09090B', borderRadius: 8, padding: 12 },
-  paramRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderColor: '#27272A' },
-  paramLabel: { color: '#A1A1AA', fontSize: 12 },
-  paramValue: { color: '#F4F4F5', fontSize: 12, fontWeight: '700' },
-  inlineInput: { backgroundColor: '#18181B', borderWidth: 1, borderColor: '#2DD4BF', borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, color: '#F4F4F5', fontSize: 12, fontWeight: '700', textAlign: 'right', minWidth: 60 },
+  profileParamsHeading: { fontSize: 12, fontWeight: '800', color: '#A1A1AA', marginBottom: 8 },
+  profileParamsTable: { backgroundColor: '#18181B', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#27272A' },
+  paramRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderColor: '#27272A' },
+  paramLabel: { color: '#D4D4D8', fontSize: 13, fontWeight: '500' },
+  inlineInput: { backgroundColor: '#09090B', borderWidth: 1, borderColor: '#2DD4BF', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6, color: '#F4F4F5', fontSize: 13, fontWeight: '700', textAlign: 'right', width: 90 },
+
+  saveParamsButton: { backgroundColor: '#2DD4BF', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 14 },
+  saveParamsButtonText: { color: '#042F2E', fontSize: 13, fontWeight: '800' },
 
   modalDarkCard: { backgroundColor: '#0B1B1E', borderRadius: 12, padding: 18, borderWidth: 1, borderColor: '#1F4B4E' },
   modalDarkTitle: { color: '#F0FDFA', fontSize: 16, fontWeight: '700' },
