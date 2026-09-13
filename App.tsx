@@ -60,7 +60,6 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [aiNote, setAiNote] = useState('');
 
-  // Поля ввода параметров атлета
   const [weightInput, setWeightInput] = useState('');
   const [heightInput, setHeightInput] = useState('');
   const [benchInput, setBenchInput] = useState('');
@@ -72,17 +71,9 @@ export default function App() {
   useEffect(() => {
     initDatabase();
     store.bootstrap();
-
-    // Автоматический вызов формы авторизации, если пользователь не авторизован
-    store.checkSession().then(() => {
-      const state = useWorkoutStore.getState();
-      if (!state.user) {
-        setIsAuthOpen(true);
-      }
-    });
+    store.checkSession();
   }, []);
 
-  // Синхронизация полей ввода профиля с состоянием хранилища
   useEffect(() => {
     if (store.profile) {
       setWeightInput(String(store.profile.body_weight ?? 75));
@@ -155,7 +146,7 @@ export default function App() {
     ? { uri: store.profile.avatar_uri } 
     : ASSETS.defaultAvatar;
 
-  // 1. СТАРТОВЫЙ ЭКРАН
+  // 1. СТАРТОВЫЙ ЭКРАН (WELCOME)
   if (screen === 'welcome') {
     return (
       <ImageBackground source={ASSETS.bgSplash} style={styles.splashBg} resizeMode="cover">
@@ -165,26 +156,34 @@ export default function App() {
           <View style={styles.splashContent}>
             <Text style={styles.splashTitle}>IronTracker</Text>
 
+            {/* Явная крупная кнопка авторизации прямо на старте */}
             {store.user ? (
-              <>
-                <Text style={styles.welcomeUserText}>
-                  Атлет: {store.user.email?.split('@')[0]} ✓
+              <View style={styles.authStatusBox}>
+                <UserCheck size={16} color="#10B981" />
+                <Text style={styles.authStatusText} numberOfLines={1}>
+                  Аккаунт: {store.user.email}
                 </Text>
-                <TouchableOpacity style={styles.splashBtn} onPress={() => setScreen('workout')}>
-                  <Text style={styles.splashBtnText}>Продолжить тренировки</Text>
+                <TouchableOpacity onPress={() => store.signOut()} style={styles.smallSignOutBtn}>
+                  <Text style={styles.smallSignOutText}>Выйти</Text>
                 </TouchableOpacity>
-              </>
+              </View>
             ) : (
-              <TouchableOpacity style={styles.splashBtn} onPress={() => setIsAuthOpen(true)}>
-                <Text style={styles.splashBtnText}>Войти / Создать аккаунт</Text>
+              <TouchableOpacity style={styles.splashMainAuthBtn} onPress={() => setIsAuthOpen(true)}>
+                <LogIn size={18} color="#042F2E" />
+                <Text style={styles.splashMainAuthText}>Войти / Создать аккаунт</Text>
               </TouchableOpacity>
             )}
+
+            <TouchableOpacity style={styles.splashBtn} onPress={() => setScreen('workout')}>
+              <Text style={styles.splashBtnText}>Начать тренировку</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity style={styles.splashBtnSecondary} onPress={() => setIsProfileOpen(true)}>
               <Text style={styles.splashBtnSecondaryText}>Параметры атлета</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
+
         {renderProfileModal()}
         <AuthModal visible={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
       </ImageBackground>
@@ -221,7 +220,7 @@ export default function App() {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
-          {/* Панель виджетов */}
+          {/* Виджет-панель */}
           <View style={styles.dashboardCard}>
             <View style={styles.dashTopRow}>
               <View style={styles.calendarBox}>
@@ -243,7 +242,7 @@ export default function App() {
               </ScrollView>
             </View>
 
-            {/* Аудиоплеер */}
+            {/* Плеер */}
             <View style={styles.dashBottomBar}>
               <View style={styles.trackInfoBlock}>
                 <Image source={avatarSource} style={styles.miniAvatar} />
@@ -284,7 +283,7 @@ export default function App() {
             </View>
           </View>
 
-          {/* Плашка белкового якоря */}
+          {/* Плашка белка */}
           <TouchableOpacity 
             style={[styles.proteinBanner, store.isProteinReachedToday && styles.proteinBannerDone]}
             onPress={store.toggleProtein}
@@ -331,7 +330,7 @@ export default function App() {
             })}
           </ScrollView>
 
-          {/* Карточка текущего упражнения */}
+          {/* Карточка активного упражнения */}
           {activeExercise && (
             <View style={styles.exerciseCard}>
               <View style={styles.exHeader}>
@@ -351,7 +350,6 @@ export default function App() {
                 </View>
               </View>
 
-              {/* План прогрессии / Gemini */}
               {activeExercise.aiInsight ? (
                 <View style={styles.aiInsightBox}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -471,7 +469,7 @@ export default function App() {
           <Text style={styles.watermark}>IronTracker • Hypertrophy Engine</Text>
         </ScrollView>
 
-        {/* Плавающий таймер отдыха */}
+        {/* Таймер */}
         {store.isTimerActive && (
           <View style={styles.floatingTimer}>
             <Text style={styles.floatingTimerLabel}>ОТДЫХ МЕЖДУ СЕТАМИ</Text>
@@ -491,7 +489,7 @@ export default function App() {
     </ImageBackground>
   );
 
-  // Модальное окно профиля с полями для ввода
+  // Модалка профиля
   function renderProfileModal() {
     const tonnageTons = (store.stats.tonnageKg / 1000).toFixed(1);
 
@@ -732,10 +730,18 @@ export default function App() {
 
 const styles = StyleSheet.create({
   splashBg: { flex: 1, width: '100%', height: '100%' },
-  splashOverlay: { flex: 1, backgroundColor: 'rgba(5, 15, 18, 0.4)', justifyContent: 'space-between', padding: 24 },
+  splashOverlay: { flex: 1, backgroundColor: 'rgba(5, 15, 18, 0.45)', justifyContent: 'space-between', padding: 24 },
   splashContent: { width: '100%', alignItems: 'center', paddingBottom: 40 },
   splashTitle: { fontSize: 36, fontWeight: '800', color: '#6EE7B7', letterSpacing: 1.5, marginBottom: 20, textShadowColor: '#000', textShadowRadius: 10 },
-  welcomeUserText: { color: '#5EEAD4', fontSize: 14, fontWeight: '800', marginBottom: 14 },
+  
+  splashMainAuthBtn: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#2DD4BF', paddingVertical: 15, borderRadius: 10, marginBottom: 12, shadowColor: '#2DD4BF', shadowOpacity: 0.4, shadowRadius: 10 },
+  splashMainAuthText: { color: '#042F2E', fontSize: 16, fontWeight: '800' },
+  
+  authStatusBox: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(6, 44, 34, 0.85)', borderWidth: 1, borderColor: '#10B981', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, marginBottom: 12 },
+  authStatusText: { color: '#6EE7B7', fontSize: 13, fontWeight: '700', flex: 1, marginHorizontal: 8 },
+  smallSignOutBtn: { backgroundColor: 'rgba(239, 68, 68, 0.2)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  smallSignOutText: { color: '#FCA5A5', fontSize: 11, fontWeight: '700' },
+
   splashBtn: { width: '100%', backgroundColor: 'rgba(16, 44, 46, 0.85)', borderWidth: 1, borderColor: '#2DD4BF', paddingVertical: 15, borderRadius: 10, alignItems: 'center', marginBottom: 12 },
   splashBtnText: { color: '#E6FFFA', fontSize: 16, fontWeight: '700' },
   splashBtnSecondary: { width: '100%', backgroundColor: 'rgba(10, 25, 28, 0.75)', borderWidth: 1, borderColor: '#1F4B4E', paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
