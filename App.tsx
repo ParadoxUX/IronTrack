@@ -562,6 +562,21 @@ export default function App() {
             <TouchableOpacity style={styles.saveParamsButton} onPress={saveUpdatedParams}>
               <Text style={styles.saveParamsButtonText}>Сохранить изменения</Text>
             </TouchableOpacity>
+
+            {/* Кнопка сброса базы данных */}
+            <TouchableOpacity 
+              style={styles.resetDbButton} 
+              onPress={() => {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                  localStorage.clear();
+                  store.bootstrap();
+                  setIsProfileOpen(false);
+                  Alert.alert('База очищена', 'Все тренировки и сеты удалены, приложение сброшено с нуля.');
+                }
+              }}
+            >
+              <Text style={styles.resetDbButtonText}>Сбросить всю базу данных</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -831,6 +846,9 @@ const styles = StyleSheet.create({
 
   saveParamsButton: { backgroundColor: '#2DD4BF', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 14 },
   saveParamsButtonText: { color: '#042F2E', fontSize: 13, fontWeight: '800' },
+
+  resetDbButton: { backgroundColor: 'rgba(239, 68, 68, 0.15)', borderWidth: 1, borderColor: '#EF4444', borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
+  resetDbButtonText: { color: '#FCA5A5', fontSize: 13, fontWeight: '800' },
 
   modalDarkCard: { backgroundColor: '#0B1B1E', borderRadius: 12, padding: 18, borderWidth: 1, borderColor: '#1F4B4E' },
   modalDarkTitle: { color: '#F0FDFA', fontSize: 16, fontWeight: '700' },
